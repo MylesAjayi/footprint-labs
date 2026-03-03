@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UK Salary &amp; Tax Calculator 2025/26 — Footprint Labs</title>
+  <meta name="description" content="Free UK salary calculator for 2025/26. Income tax, National Insurance, student loans, pension, Scottish rates. Compare two salaries side by side.">
+  <meta name="keywords" content="UK salary calculator, take home pay calculator 2025, UK tax calculator, national insurance calculator, Scottish tax rates 2025">
+  <meta property="og:title" content="UK Salary &amp; Tax Calculator 2025/26 — Footprint Labs">
+  <meta property="og:description" content="Calculate your UK take-home pay for 2025/26. Income tax, NI, student loans, pension, salary sacrifice. Free and accurate.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://footprintlabs.co.uk/tools/salary-calculator.html">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦶</text></svg>">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/shared.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "UK Salary & Tax Calculator 2025/26",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+    "description": "Calculate UK take-home pay including income tax, National Insurance, student loans, and pension for the 2025/26 tax year."
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="logo"><span class="logo-icon">🦶</span> Footprint Labs</a>
+      <button class="mobile-toggle" aria-label="Toggle navigation">☰</button>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="macro-calculator.html">Macros</a></li>
+          <li><a href="salary-calculator.html" class="active">Salary</a></li>
+          <li><a href="rent-vs-buy.html">Rent vs Buy</a></li>
+          <li><button class="theme-toggle" aria-label="Toggle dark/light mode">🌙</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="tool-hero">
+      <h1>UK Salary &amp; Tax <span class="highlight">Calculator</span></h1>
+      <p>2025/26 tax year. Income tax, National Insurance, student loans, pension. Accurate to the penny.</p>
+    </div>
+
+    <!-- Tabs: Single salary / Compare -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('single')">Single Salary</button>
+      <button class="tab-btn" onclick="switchTab('compare')">Compare Two</button>
+    </div>
+
+    <!-- ==================== SINGLE SALARY TAB ==================== -->
+    <div class="tab-panel active" id="panel-single">
+      <div class="tool-layout with-sidebar">
+        <div class="tool-inputs">
+          <h2>💷 Your Salary</h2>
+
+          <div class="form-group">
+            <label for="salaryInput">Salary Amount</label>
+            <input type="number" id="salaryInput" value="45000" min="0" step="100" placeholder="e.g. 45000">
+          </div>
+
+          <div class="form-group">
+            <label for="salaryPeriod">Period</label>
+            <select id="salaryPeriod">
+              <option value="annual" selected>Annual</option>
+              <option value="monthly">Monthly</option>
+              <option value="weekly">Weekly</option>
+              <option value="hourly">Hourly</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="hoursGroup" style="display:none">
+            <label for="hoursPerWeek">Hours per Week</label>
+            <input type="number" id="hoursPerWeek" value="37.5" min="1" max="80" step="0.5">
+          </div>
+
+          <!-- Scottish tax toggle -->
+          <div class="toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="scottishToggle">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Scottish Tax Rates</span>
+          </div>
+
+          <!-- Student loan -->
+          <div class="form-group">
+            <label for="studentLoan">Student Loan</label>
+            <select id="studentLoan">
+              <option value="none" selected>None</option>
+              <option value="plan1">Plan 1 (pre-2012)</option>
+              <option value="plan2">Plan 2 (post-2012)</option>
+              <option value="plan4">Plan 4 (Scotland)</option>
+              <option value="plan5">Plan 5 (post-2023)</option>
+              <option value="postgrad">Postgraduate Loan</option>
+            </select>
+          </div>
+
+          <!-- Pension -->
+          <div class="form-group">
+            <label for="pensionPct">Pension Contribution (%) <span class="label-hint">pre-tax</span></label>
+            <input type="number" id="pensionPct" value="0" min="0" max="100" step="0.5">
+          </div>
+
+          <!-- Salary sacrifice -->
+          <div class="form-group">
+            <label for="sacrificeAmount">Salary Sacrifice (£/year) <span class="label-hint">optional</span></label>
+            <input type="number" id="sacrificeAmount" value="0" min="0" step="100">
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;margin-top:.5rem;" onclick="calcSalary()">Calculate Take-Home</button>
+        </div>
+
+        <div class="tool-results" id="salaryResults">
+          <div class="result-card" id="salaryPlaceholder">
+            <div style="text-align:center;padding:3rem 1rem;color:var(--text-muted);">
+              <p style="font-size:2rem;margin-bottom:1rem;">💷</p>
+              <p style="font-size:1.05rem;font-weight:600;">Enter your salary and hit Calculate</p>
+              <p style="font-size:.9rem;margin-top:.5rem;">See your take-home pay broken down by tax, NI, student loans, and pension.</p>
+            </div>
+          </div>
+          <div id="salaryResultsContent" style="display:none;"></div>
+        </div>
+
+        <aside class="ad-sidebar">
+          <!-- Replace with Google AdSense code -->
+          <div class="ad-placeholder">Ad Space<br>300×250</div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- ==================== COMPARE TAB ==================== -->
+    <div class="tab-panel" id="panel-compare">
+      <div class="tool-layout" style="grid-template-columns:1fr 1fr;">
+        <div class="tool-inputs" style="position:static;">
+          <h2>💼 Salary A (Current)</h2>
+          <div class="form-group">
+            <label for="compA">Annual Gross</label>
+            <input type="number" id="compA" value="40000" min="0" step="100">
+          </div>
+          <div class="toggle-row">
+            <label class="toggle-switch"><input type="checkbox" id="compAScot"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Scottish</span>
+          </div>
+        </div>
+        <div class="tool-inputs" style="position:static;">
+          <h2>🚀 Salary B (Offer)</h2>
+          <div class="form-group">
+            <label for="compB">Annual Gross</label>
+            <input type="number" id="compB" value="55000" min="0" step="100">
+          </div>
+          <div class="toggle-row">
+            <label class="toggle-switch"><input type="checkbox" id="compBScot"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Scottish</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin:1rem 0;">
+        <button class="btn btn-primary" onclick="compareSalaries()">Compare</button>
+      </div>
+      <div id="compareResults"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2025 <a href="../index.html">Footprint Labs</a>. Tax calculations based on 2025/26 HMRC rates. For guidance only — consult a tax professional for personal advice.</p>
+    </div>
+  </footer>
+
+<script>
+(function(){
+  'use strict';
+
+  // Show/hide hours field
+  document.getElementById('salaryPeriod').addEventListener('change', function(){
+    document.getElementById('hoursGroup').style.display = this.value === 'hourly' ? 'block' : 'none';
+  });
+
+  // ==================== TAX ENGINE ====================
+
+  // 2025/26 UK Tax Bands (rUK — England, Wales, NI)
+  var ukBands = [
+    { from: 0,      to: 12570,  rate: 0    },
+    { from: 12570,  to: 50270,  rate: 0.20 },
+    { from: 50270,  to: 125140, rate: 0.40 },
+    { from: 125140, to: Infinity, rate: 0.45 }
+  ];
+
+  // Scottish 2025/26 Tax Bands
+  var scotBands = [
+    { from: 0,      to: 12570,  rate: 0     },
+    { from: 12570,  to: 14876,  rate: 0.19  },
+    { from: 14876,  to: 26561,  rate: 0.20  },
+    { from: 26561,  to: 43662,  rate: 0.21  },
+    { from: 43662,  to: 75000,  rate: 0.42  },
+    { from: 75000,  to: 125140, rate: 0.45  },
+    { from: 125140, to: Infinity, rate: 0.48 }
+  ];
+
+  // NI 2025/26 Employee Class 1
+  // Primary threshold: £12,570/yr, UEL: £50,270/yr
+  // 8% between PT-UEL, 2% above UEL
+  function calcNI(gross) {
+    var ni = 0;
+    if (gross > 12570) {
+      var band1 = Math.min(gross, 50270) - 12570;
+      ni += band1 * 0.08;
+    }
+    if (gross > 50270) {
+      ni += (gross - 50270) * 0.02;
+    }
+    return Math.max(0, ni);
+  }
+
+  // Income tax with personal allowance tapering
+  function calcTax(gross, bands) {
+    // Personal allowance taper: reduced by £1 for every £2 over £100,000
+    var pa = 12570;
+    if (gross > 100000) {
+      pa = Math.max(0, 12570 - Math.floor((gross - 100000) / 2));
+    }
+    // Adjust bands
+    var adjustedBands = JSON.parse(JSON.stringify(bands));
+    adjustedBands[0].to = pa;
+    if (adjustedBands[1]) adjustedBands[1].from = pa;
+
+    var tax = 0;
+    for (var i = 0; i < adjustedBands.length; i++) {
+      var b = adjustedBands[i];
+      if (gross > b.from) {
+        var taxable = Math.min(gross, b.to) - b.from;
+        tax += taxable * b.rate;
+      }
+    }
+    return { tax: Math.max(0, tax), personalAllowance: pa };
+  }
+
+  // Student loan thresholds 2025/26
+  var studentLoans = {
+    plan1:    { threshold: 24990, rate: 0.09 },
+    plan2:    { threshold: 27295, rate: 0.09 },
+    plan4:    { threshold: 31395, rate: 0.09 },
+    plan5:    { threshold: 25000, rate: 0.09 },
+    postgrad: { threshold: 21000, rate: 0.06 }
+  };
+
+  function calcStudentLoan(gross, plan) {
+    if (plan === 'none' || !studentLoans[plan]) return 0;
+    var sl = studentLoans[plan];
+    return gross > sl.threshold ? (gross - sl.threshold) * sl.rate : 0;
+  }
+
+  // Full calculation
+  function fullCalc(annualGross, isScottish, studentPlan, pensionPct, sacrificeAmt) {
+    pensionPct = pensionPct || 0;
+    sacrificeAmt = sacrificeAmt || 0;
+    studentPlan = studentPlan || 'none';
+
+    // Pension is pre-tax (salary sacrifice style)
+    var pensionAmt = annualGross * (pensionPct / 100);
+    var grossAfterPension = annualGross - pensionAmt - sacrificeAmt;
+    grossAfterPension = Math.max(0, grossAfterPension);
+
+    var bands = isScottish ? scotBands : ukBands;
+    var taxResult = calcTax(grossAfterPension, bands);
+    var ni = calcNI(grossAfterPension);
+    var sl = calcStudentLoan(annualGross, studentPlan); // SL based on gross
+    var totalDeductions = taxResult.tax + ni + sl + pensionAmt + sacrificeAmt;
+    var netAnnual = annualGross - totalDeductions;
+
+    return {
+      gross: annualGross,
+      personalAllowance: taxResult.personalAllowance,
+      incomeTax: taxResult.tax,
+      ni: ni,
+      studentLoan: sl,
+      pension: pensionAmt,
+      sacrifice: sacrificeAmt,
+      totalDeductions: totalDeductions,
+      net: netAnnual,
+      netMonthly: netAnnual / 12,
+      netWeekly: netAnnual / 52,
+      netDaily: netAnnual / 260,
+      netHourly: netAnnual / (52 * 37.5),
+      effectiveRate: annualGross > 0 ? (totalDeductions / annualGross * 100) : 0,
+      isScottish: isScottish
+    };
+  }
+
+  function toAnnual(amount, period) {
+    switch(period) {
+      case 'monthly': return amount * 12;
+      case 'weekly': return amount * 52;
+      case 'hourly': return amount * parseFloat(document.getElementById('hoursPerWeek').value || 37.5) * 52;
+      default: return amount;
+    }
+  }
+
+  // ==================== RENDER ====================
+
+  function renderSalary(r) {
+    var g = r.gross;
+    var maxBarVal = g || 1;
+    var html = '';
+
+    // Key figure
+    html += '<div class="result-card fade-up"><h3>💰 Take-Home Pay</h3>';
+    html += '<div class="result-highlight"><div class="big-number">' + fpMoney(r.net, 2) + '</div><div class="big-label">Annual Net Pay</div></div>';
+    html += '<div class="result-row"><span class="result-label">Monthly</span><span class="result-value">' + fpMoney(r.netMonthly) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Weekly</span><span class="result-value">' + fpMoney(r.netWeekly) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Daily (260 working days)</span><span class="result-value">' + fpMoney(r.netDaily) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Hourly (37.5 hrs/wk)</span><span class="result-value">' + fpMoney(r.netHourly) + '</span></div>';
+    html += '</div>';
+
+    // Deductions breakdown
+    html += '<div class="result-card fade-up"><h3>📊 Deductions Breakdown' + (r.isScottish ? ' <span style="font-size:.75rem;background:var(--secondary);color:#fff;padding:.15rem .5rem;border-radius:4px;">🏴 Scottish Rates</span>' : '') + '</h3>';
+    html += '<div class="result-row"><span class="result-label">Gross Salary</span><span class="result-value">' + fpMoney(g) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Personal Allowance</span><span class="result-value">' + fpMoney(r.personalAllowance, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Income Tax</span><span class="result-value negative">−' + fpMoney(r.incomeTax) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">National Insurance</span><span class="result-value negative">−' + fpMoney(r.ni) + '</span></div>';
+    if (r.studentLoan > 0) {
+      html += '<div class="result-row"><span class="result-label">Student Loan</span><span class="result-value negative">−' + fpMoney(r.studentLoan) + '</span></div>';
+    }
+    if (r.pension > 0) {
+      html += '<div class="result-row"><span class="result-label">Pension</span><span class="result-value negative">−' + fpMoney(r.pension) + '</span></div>';
+    }
+    if (r.sacrifice > 0) {
+      html += '<div class="result-row"><span class="result-label">Salary Sacrifice</span><span class="result-value negative">−' + fpMoney(r.sacrifice) + '</span></div>';
+    }
+    html += '<div class="result-row" style="border-top:2px solid var(--border);padding-top:.75rem;margin-top:.25rem;"><span class="result-label" style="font-weight:700;">Total Deductions</span><span class="result-value negative">−' + fpMoney(r.totalDeductions) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Effective Tax Rate</span><span class="result-value accent">' + r.effectiveRate.toFixed(1) + '%</span></div>';
+    html += '</div>';
+
+    // Visual bar chart
+    html += '<div class="result-card fade-up"><h3>📈 Visual Breakdown</h3>';
+    html += '<div class="stacked-bar">';
+    var taxPct = g > 0 ? (r.incomeTax / g * 100) : 0;
+    var niPct = g > 0 ? (r.ni / g * 100) : 0;
+    var slPct = g > 0 ? (r.studentLoan / g * 100) : 0;
+    var penPct = g > 0 ? (r.pension / g * 100) : 0;
+    var netPct = g > 0 ? (r.net / g * 100) : 100;
+    html += '<div class="bar-fill takehome" style="width:' + netPct + '%">' + (netPct > 8 ? netPct.toFixed(0) + '%' : '') + '</div>';
+    html += '<div class="bar-fill tax" style="width:' + taxPct + '%">' + (taxPct > 5 ? taxPct.toFixed(0) + '%' : '') + '</div>';
+    html += '<div class="bar-fill ni" style="width:' + niPct + '%">' + (niPct > 5 ? niPct.toFixed(0) + '%' : '') + '</div>';
+    if (slPct > 0) html += '<div class="bar-fill student" style="width:' + slPct + '%">' + (slPct > 5 ? slPct.toFixed(0) + '%' : '') + '</div>';
+    if (penPct > 0) html += '<div class="bar-fill pension" style="width:' + penPct + '%">' + (penPct > 5 ? penPct.toFixed(0) + '%' : '') + '</div>';
+    html += '</div>';
+    html += '<div class="chart-legend">';
+    html += '<div class="legend-item"><span class="legend-dot" style="background:#2ecc71"></span>Take-Home ' + fpMoney(r.net, 0) + '</div>';
+    html += '<div class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span>Tax ' + fpMoney(r.incomeTax, 0) + '</div>';
+    html += '<div class="legend-item"><span class="legend-dot" style="background:#e67e22"></span>NI ' + fpMoney(r.ni, 0) + '</div>';
+    if (r.studentLoan > 0) html += '<div class="legend-item"><span class="legend-dot" style="background:#9b59b6"></span>Student Loan ' + fpMoney(r.studentLoan, 0) + '</div>';
+    if (r.pension > 0) html += '<div class="legend-item"><span class="legend-dot" style="background:#00b4d8"></span>Pension ' + fpMoney(r.pension, 0) + '</div>';
+    html += '</div></div>';
+
+    // Salary sacrifice explainer
+    if (r.sacrifice > 0 || r.pension > 0) {
+      var noPensionCalc = fullCalc(g, r.isScottish, 'none', 0, 0);
+      var savingVsPure = noPensionCalc.totalDeductions - (r.incomeTax + r.ni + r.studentLoan);
+      html += '<div class="result-card fade-up"><h3>🎯 Tax Savings from Pension / Sacrifice</h3>';
+      html += '<p style="font-size:.9rem;color:var(--text-muted);margin-bottom:.75rem;">Because pension contributions (and salary sacrifice) reduce your taxable income, you pay less tax and NI.</p>';
+      html += '<div class="result-row"><span class="result-label">Tax + NI savings</span><span class="result-value positive">+' + fpMoney(savingVsPure) + '/year</span></div>';
+      html += '</div>';
+    }
+
+    // Ad placeholder
+    html += '<div class="ad-placeholder">Ad Space — In-content rectangle</div>';
+
+    return html;
+  }
+
+  // ==================== SINGLE CALC ====================
+  window.calcSalary = function() {
+    var amount = parseFloat(document.getElementById('salaryInput').value);
+    var period = document.getElementById('salaryPeriod').value;
+    if (!amount || amount < 0) { fpToast('Please enter a valid salary'); return; }
+    var annual = toAnnual(amount, period);
+    var isScottish = document.getElementById('scottishToggle').checked;
+    var studentPlan = document.getElementById('studentLoan').value;
+    var pensionPct = parseFloat(document.getElementById('pensionPct').value) || 0;
+    var sacrifice = parseFloat(document.getElementById('sacrificeAmount').value) || 0;
+    var r = fullCalc(annual, isScottish, studentPlan, pensionPct, sacrifice);
+
+    document.getElementById('salaryPlaceholder').style.display = 'none';
+    var content = document.getElementById('salaryResultsContent');
+    content.style.display = 'block';
+    content.innerHTML = renderSalary(r);
+  };
+
+  // ==================== COMPARE ====================
+  window.compareSalaries = function() {
+    var aGross = parseFloat(document.getElementById('compA').value) || 0;
+    var bGross = parseFloat(document.getElementById('compB').value) || 0;
+    var aScot = document.getElementById('compAScot').checked;
+    var bScot = document.getElementById('compBScot').checked;
+    var a = fullCalc(aGross, aScot, 'none', 0, 0);
+    var b = fullCalc(bGross, bScot, 'none', 0, 0);
+    var diff = b.net - a.net;
+
+    var html = '<div class="comparison-grid">';
+    // Column A
+    html += '<div class="comparison-col"><h4>💼 Salary A</h4>';
+    html += '<div class="big-number" style="font-size:1.5rem;color:var(--accent);">' + fpMoney(a.net, 0) + '</div>';
+    html += '<div class="big-label">Annual Net</div>';
+    html += '<div class="result-row mt-2"><span class="result-label">Gross</span><span class="result-value">' + fpMoney(a.gross, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Tax</span><span class="result-value">−' + fpMoney(a.incomeTax, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">NI</span><span class="result-value">−' + fpMoney(a.ni, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Monthly Net</span><span class="result-value">' + fpMoney(a.netMonthly) + '</span></div>';
+    html += '</div>';
+
+    // Column B
+    html += '<div class="comparison-col"><h4>🚀 Salary B</h4>';
+    html += '<div class="big-number" style="font-size:1.5rem;color:var(--secondary);">' + fpMoney(b.net, 0) + '</div>';
+    html += '<div class="big-label">Annual Net</div>';
+    html += '<div class="result-row mt-2"><span class="result-label">Gross</span><span class="result-value">' + fpMoney(b.gross, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Tax</span><span class="result-value">−' + fpMoney(b.incomeTax, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">NI</span><span class="result-value">−' + fpMoney(b.ni, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Monthly Net</span><span class="result-value">' + fpMoney(b.netMonthly) + '</span></div>';
+    html += '</div></div>';
+
+    // Difference
+    var cls = diff > 0 ? 'buy' : diff < 0 ? 'rent' : 'neutral';
+    html += '<div class="verdict-banner ' + cls + '">';
+    if (diff > 0) {
+      html += 'Salary B gives you <strong>' + fpMoney(diff, 0) + '</strong> more per year (' + fpMoney(diff/12) + '/month)';
+    } else if (diff < 0) {
+      html += 'Salary A gives you <strong>' + fpMoney(Math.abs(diff), 0) + '</strong> more per year (' + fpMoney(Math.abs(diff)/12) + '/month)';
+    } else {
+      html += 'Both salaries give you the same take-home pay';
+    }
+    html += '</div>';
+
+    document.getElementById('compareResults').innerHTML = html;
+  };
+
+  // ==================== TAB SWITCH ====================
+  window.switchTab = function(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(b, i) {
+      b.classList.toggle('active', (tab === 'single' && i === 0) || (tab === 'compare' && i === 1));
+    });
+    document.getElementById('panel-single').classList.toggle('active', tab === 'single');
+    document.getElementById('panel-compare').classList.toggle('active', tab === 'compare');
+  };
+
+})();
+</script>
+</body>
+</html>
