@@ -81,6 +81,18 @@
         </div>
 
         <div class="form-group">
+          <label for="planToStay">How long do you plan to stay? (years) <span class="label-hint">Key factor — buying favours longer stays</span></label>
+          <input type="range" id="planToStay" min="1" max="30" value="10" step="1" oninput="document.getElementById('stayDisplay').textContent=this.value">
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--text-muted);"><span>1 yr</span><span id="stayDisplay" style="font-weight:700;color:var(--accent);">10</span><span>30 yrs</span></div>
+        </div>
+
+        <div class="form-group">
+          <label for="rentYearsBefore">Years renting before buying <span class="label-hint">0 = buy now</span></label>
+          <input type="range" id="rentYearsBefore" min="0" max="10" value="0" step="1" oninput="document.getElementById('rentBeforeDisplay').textContent=this.value">
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--text-muted);"><span>0 (buy now)</span><span id="rentBeforeDisplay" style="font-weight:700;color:var(--accent);">0</span><span>10 yrs</span></div>
+        </div>
+
+        <div class="form-group">
           <label for="monthlyRent">Monthly Rent (£)</label>
           <input type="number" id="monthlyRent" value="1500" min="0" step="50">
         </div>
@@ -122,6 +134,48 @@
           </label>
           <span class="toggle-label">First-Time Buyer</span>
         </div>
+
+        <details style="margin-top:1rem;border:1px solid var(--border);border-radius:8px;padding:0.8rem;">
+          <summary style="font-weight:600;cursor:pointer;font-size:0.95rem;">⚙️ Advanced Options</summary>
+          <div style="margin-top:1rem;display:flex;flex-direction:column;gap:0.8rem;">
+
+            <div class="form-group" style="margin:0;">
+              <label for="solicitorFees">Solicitor/Legal Fees (£)</label>
+              <input type="number" id="solicitorFees" value="1500" min="0" step="100">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="surveyFees">Survey & Valuation (£)</label>
+              <input type="number" id="surveyFees" value="500" min="0" step="100">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="homeInsurance">Home Insurance (£/year)</label>
+              <input type="number" id="homeInsurance" value="400" min="0" step="50">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="rentersInsurance">Renters Insurance (£/year)</label>
+              <input type="number" id="rentersInsurance" value="150" min="0" step="25">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="sellingCost">Selling Costs (% of property value) <span class="label-hint">Estate agent + legal ~ 2-3%</span></label>
+              <input type="number" id="sellingCost" value="2.5" min="0" max="10" step="0.5">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="monthlySavings">Monthly savings if renting (£) <span class="label-hint">Extra you'd invest vs buying costs</span></label>
+              <input type="number" id="monthlySavings" value="0" min="0" step="50">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label for="inflation">General Inflation (%/year)</label>
+              <input type="number" id="inflation" value="2.5" min="0" max="10" step="0.5">
+            </div>
+
+          </div>
+        </details>
 
         <button class="btn btn-primary" style="width:100%;margin-top:.5rem;" onclick="calcRentVsBuy()">Compare Rent vs Buy</button>
       </div>
@@ -213,6 +267,8 @@
     var depositAmt = parseFloat(document.getElementById('deposit').value) || 0;
     var rate = parseFloat(document.getElementById('mortgageRate').value) || 0;
     var term = parseInt(document.getElementById('mortgageTerm').value) || 25;
+    var planToStay = parseInt(document.getElementById('planToStay').value) || 10;
+    var rentBeforeYears = parseInt(document.getElementById('rentYearsBefore').value) || 0;
     var rentMonthly = parseFloat(document.getElementById('monthlyRent').value) || 0;
     var rentIncPct = parseFloat(document.getElementById('rentIncrease').value) || 0;
     var apprecPct = parseFloat(document.getElementById('appreciation').value) || 0;
@@ -221,6 +277,13 @@
     var groundRent = parseFloat(document.getElementById('groundRent').value) || 0;
     var investReturnPct = parseFloat(document.getElementById('investReturn').value) || 0;
     var isFTB = document.getElementById('ftbToggle').checked;
+    var solicitorFees = parseFloat(document.getElementById('solicitorFees').value) || 0;
+    var surveyFees = parseFloat(document.getElementById('surveyFees').value) || 0;
+    var homeInsurance = parseFloat(document.getElementById('homeInsurance').value) || 0;
+    var rentersInsurance = parseFloat(document.getElementById('rentersInsurance').value) || 0;
+    var sellingCostPct = parseFloat(document.getElementById('sellingCost').value) || 0;
+    var monthlySavingsIfRenting = parseFloat(document.getElementById('monthlySavings').value) || 0;
+    var inflationPct = parseFloat(document.getElementById('inflation').value) || 0;
 
     if (price <= 0) { fpToast('Please enter a valid property price'); return; }
     if (depositAmt >= price) { fpToast('Deposit must be less than property price'); return; }
@@ -228,191 +291,200 @@
     var mortgage = price - depositAmt;
     var monthlyPmt = monthlyMortgage(mortgage, rate, term);
     var stampDuty = isFTB ? stampDutyFTB(price) : stampDutyStandard(price);
+    var upfrontBuyCosts = stampDuty + solicitorFees + surveyFees;
 
-    // Year-by-year comparison
-    var years = [5, 10, 15, 20, 25];
-    var yearData = [];
-
-    for (var yi = 0; yi < years.length; yi++) {
-      var y = years[yi];
-
-      // ---- BUY side ----
-      var totalMortgagePaid = 0;
-      var totalMaintenance = 0;
-      var totalServiceGround = 0;
-      var propertyVal = price;
-      for (var yr = 1; yr <= y; yr++) {
-        totalMortgagePaid += monthlyPmt * 12;
-        totalMaintenance += propertyVal * (maintPct / 100);
-        totalServiceGround += serviceCharge + groundRent;
-        propertyVal *= (1 + apprecPct / 100);
-      }
-      var monthsPaid = Math.min(y * 12, term * 12);
-      var outstanding = y >= term ? 0 : remainingBalance(mortgage, rate, term, monthsPaid);
-      var equity = propertyVal - Math.max(0, outstanding);
-      var totalBuyCost = depositAmt + stampDuty + totalMortgagePaid + totalMaintenance + totalServiceGround;
-      var buyNetPosition = equity - totalBuyCost; // wealth position
-
-      // ---- RENT side ----
-      var totalRent = 0;
-      var currentRent = rentMonthly;
-      for (var yr2 = 1; yr2 <= y; yr2++) {
-        totalRent += currentRent * 12;
-        currentRent *= (1 + rentIncPct / 100);
-      }
-      // Opportunity cost: invest the deposit + stamp duty + difference in monthly costs
-      var investedCapital = depositAmt + stampDuty;
-      var investmentValue = investedCapital * Math.pow(1 + investReturnPct / 100, y);
-      var rentNetPosition = investmentValue - totalRent;
-
-      var buySaves = buyNetPosition - rentNetPosition;
-
-      yearData.push({
-        year: y,
-        monthlyMortgage: monthlyPmt,
-        monthlyRentNow: y === years[0] ? rentMonthly : rentMonthly * Math.pow(1 + rentIncPct / 100, y - 1),
-        totalBuyCost: totalBuyCost,
-        totalRent: totalRent,
-        equity: equity,
-        propertyValue: propertyVal,
-        outstanding: outstanding,
-        investmentValue: investmentValue,
-        buyNetPosition: buyNetPosition,
-        rentNetPosition: rentNetPosition,
-        buySaves: buySaves
-      });
+    // ==== SCENARIO A: BUY NOW ====
+    var buyYearData = [];
+    var cumBuySpent = depositAmt + upfrontBuyCosts;
+    var propertyVal = price;
+    for (var y = 1; y <= planToStay; y++) {
+      cumBuySpent += monthlyPmt * 12;
+      cumBuySpent += propertyVal * (maintPct / 100);
+      cumBuySpent += (serviceCharge + groundRent + homeInsurance) * Math.pow(1 + inflationPct / 100, y - 1);
+      propertyVal *= (1 + apprecPct / 100);
+      var mp = Math.min(y * 12, term * 12);
+      var ob = y >= term ? 0 : remainingBalance(mortgage, rate, term, mp);
+      var eq = propertyVal - Math.max(0, ob);
+      var sc = propertyVal * (sellingCostPct / 100);
+      buyYearData.push({ year: y, totalSpent: cumBuySpent, propertyValue: propertyVal, equity: eq, outstanding: ob, sellingCosts: sc, netEquity: eq - sc, wealthPosition: eq - sc });
     }
 
-    // Find break-even
+    // ==== SCENARIO B: RENT & INVEST ====
+    var rentYearData = [];
+    var investPot = depositAmt + upfrontBuyCosts;
+    var cumRentSpent = 0;
+    var curRent = rentMonthly;
+    for (var y2 = 1; y2 <= planToStay; y2++) {
+      cumRentSpent += curRent * 12 + rentersInsurance * Math.pow(1 + inflationPct / 100, y2 - 1);
+      var buyMo = monthlyPmt + (price * Math.pow(1 + apprecPct / 100, y2 - 1) * maintPct / 100 / 12) + ((serviceCharge + groundRent + homeInsurance) * Math.pow(1 + inflationPct / 100, y2 - 1) / 12);
+      var rentMo = curRent + (rentersInsurance * Math.pow(1 + inflationPct / 100, y2 - 1) / 12);
+      var monthlySaved = Math.max(0, buyMo - rentMo) + monthlySavingsIfRenting;
+      investPot = investPot * (1 + investReturnPct / 100) + monthlySaved * 12;
+      curRent *= (1 + rentIncPct / 100);
+      rentYearData.push({ year: y2, totalSpent: cumRentSpent, investmentValue: investPot, monthlyRent: curRent / (1 + rentIncPct / 100), wealthPosition: investPot });
+    }
+
+    // ==== SCENARIO C: RENT X YEARS THEN BUY ====
+    var rentThenBuyData = null;
+    if (rentBeforeYears > 0 && rentBeforeYears < planToStay) {
+      var rtbPot = depositAmt, rtbRent = rentMonthly, rtbTotalRent = 0;
+      for (var r = 1; r <= rentBeforeYears; r++) { rtbTotalRent += rtbRent * 12; rtbPot *= (1 + investReturnPct / 100); rtbRent *= (1 + rentIncPct / 100); }
+      var fPrice = price * Math.pow(1 + apprecPct / 100, rentBeforeYears);
+      var fDep = Math.min(rtbPot, fPrice * 0.95);
+      var fMort = fPrice - fDep;
+      var fSD = isFTB ? stampDutyFTB(fPrice) : stampDutyStandard(fPrice);
+      var fPmt = monthlyMortgage(fMort, rate, term);
+      var ownYears = planToStay - rentBeforeYears;
+      var rtbCum = fDep + fSD + solicitorFees + surveyFees, rtbPV = fPrice;
+      for (var b = 1; b <= ownYears; b++) { rtbCum += fPmt * 12 + rtbPV * (maintPct / 100) + (serviceCharge + groundRent + homeInsurance) * Math.pow(1 + inflationPct / 100, b - 1); rtbPV *= (1 + apprecPct / 100); }
+      var rtbMP = Math.min(ownYears * 12, term * 12);
+      var rtbOB = ownYears >= term ? 0 : remainingBalance(fMort, rate, term, rtbMP);
+      var rtbEq = rtbPV - Math.max(0, rtbOB), rtbSC = rtbPV * (sellingCostPct / 100);
+      rentThenBuyData = { rentYears: rentBeforeYears, buyYears: ownYears, grownDeposit: rtbPot, futurePrice: fPrice, futureMortgage: fMort, futureMonthlyPmt: fPmt, futureStampDuty: fSD, totalSpent: rtbTotalRent + rtbCum, totalRentSpent: rtbTotalRent, netEquity: rtbEq - rtbSC, propertyValue: rtbPV, wealthPosition: rtbEq - rtbSC };
+    }
+
+    // Break-even
     var breakEvenYear = null;
-    // Check year by year from 1 to 30
-    for (var by = 1; by <= 30; by++) {
-      var pv = price * Math.pow(1 + apprecPct / 100, by);
-      var mp = Math.min(by * 12, term * 12);
-      var ob = by >= term ? 0 : remainingBalance(mortgage, rate, term, mp);
-      var eq = pv - Math.max(0, ob);
-      var tmc = 0, tmnt = 0, tsg = 0, pvCalc = price;
-      for (var z = 1; z <= by; z++) {
-        tmc += monthlyPmt * 12;
-        tmnt += pvCalc * (maintPct / 100);
-        tsg += serviceCharge + groundRent;
-        pvCalc *= (1 + apprecPct / 100);
-      }
-      var bCost = depositAmt + stampDuty + tmc + tmnt + tsg;
-      var bNet = eq - bCost;
-
-      var tr = 0, cr = rentMonthly;
-      for (var z2 = 1; z2 <= by; z2++) {
-        tr += cr * 12;
-        cr *= (1 + rentIncPct / 100);
-      }
-      var iv = (depositAmt + stampDuty) * Math.pow(1 + investReturnPct / 100, by);
-      var rNet = iv - tr;
-
-      if (bNet > rNet) {
-        breakEvenYear = by;
-        break;
-      }
-    }
+    for (var be = 0; be < buyYearData.length; be++) { if (buyYearData[be].wealthPosition > rentYearData[be].wealthPosition) { breakEvenYear = buyYearData[be].year; break; } }
 
     // ==================== RENDER ====================
     document.getElementById('rvbPlaceholder').style.display = 'none';
     var content = document.getElementById('rvbResultsContent');
     content.style.display = 'block';
-
     var html = '';
+    var fBuy = buyYearData[buyYearData.length - 1];
+    var fRent = rentYearData[rentYearData.length - 1];
 
     // Verdict
-    var mainYear = yearData[1] || yearData[0]; // 10-year or 5-year
-    if (mainYear.buySaves > 0) {
-      html += '<div class="verdict-banner buy">Based on your numbers, <strong>buying saves you ' + fpMoney(Math.abs(mainYear.buySaves), 0) + '</strong> over ' + mainYear.year + ' years compared to renting.</div>';
-    } else if (mainYear.buySaves < 0) {
-      html += '<div class="verdict-banner rent">Based on your numbers, <strong>renting saves you ' + fpMoney(Math.abs(mainYear.buySaves), 0) + '</strong> over ' + mainYear.year + ' years compared to buying.</div>';
-    } else {
-      html += '<div class="verdict-banner neutral">Based on your numbers, renting and buying cost about the same over ' + mainYear.year + ' years.</div>';
-    }
+    var scenarios = [{ name: '🏠 Buy Now', wealth: fBuy.wealthPosition, cls: 'buy' }, { name: '🏢 Rent & Invest', wealth: fRent.wealthPosition, cls: 'rent' }];
+    if (rentThenBuyData) scenarios.push({ name: '🔄 Rent ' + rentBeforeYears + 'yr then Buy', wealth: rentThenBuyData.wealthPosition, cls: 'neutral' });
+    scenarios.sort(function(a, b) { return b.wealth - a.wealth; });
+    var winner = scenarios[0], diff2 = winner.wealth - scenarios[1].wealth;
+    html += '<div class="verdict-banner ' + winner.cls + '">After <strong>' + planToStay + ' years</strong>, your best option is <strong>' + winner.name + '</strong>';
+    if (diff2 > 1000) html += ' — you\'d be <strong>' + fpMoney(diff2, 0) + '</strong> better off';
+    html += '.</div>';
 
-    // Monthly comparison
-    html += '<div class="result-card fade-up"><h3>📅 Monthly Costs (Today)</h3>';
-    html += '<div class="comparison-grid">';
+    // Wealth cards
+    html += '<div class="result-card fade-up"><h3>💰 Wealth Position After ' + planToStay + ' Years</h3>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1rem;">';
+    // Buy card
+    html += '<div style="background:var(--bg-card);border:2px solid ' + (winner.name.includes('Buy Now') ? 'var(--accent)' : 'var(--border)') + ';border-radius:12px;padding:1.2rem;text-align:center;">';
+    html += '<div style="font-size:0.85rem;font-weight:600;">🏠 Buy Now</div>';
+    html += '<div class="big-number" style="font-size:1.6rem;color:var(--accent);">' + fpMoney(fBuy.wealthPosition, 0) + '</div>';
+    html += '<div style="font-size:0.8rem;color:var(--text-muted);">Net equity after selling</div>';
+    html += '<div style="font-size:0.82rem;margin-top:0.5rem;">Property: ' + fpMoney(fBuy.propertyValue, 0) + '</div>';
+    html += '<div style="font-size:0.82rem;">Total spent: ' + fpMoney(fBuy.totalSpent, 0) + '</div></div>';
+    // Rent card
+    html += '<div style="background:var(--bg-card);border:2px solid ' + (winner.name.includes('Rent &') ? 'var(--accent)' : 'var(--border)') + ';border-radius:12px;padding:1.2rem;text-align:center;">';
+    html += '<div style="font-size:0.85rem;font-weight:600;">🏢 Rent & Invest</div>';
+    html += '<div class="big-number" style="font-size:1.6rem;color:var(--secondary);">' + fpMoney(fRent.wealthPosition, 0) + '</div>';
+    html += '<div style="font-size:0.8rem;color:var(--text-muted);">Investment portfolio</div>';
+    html += '<div style="font-size:0.82rem;margin-top:0.5rem;">Total rent: ' + fpMoney(fRent.totalSpent, 0) + '</div>';
+    html += '<div style="font-size:0.82rem;">Rent yr ' + planToStay + ': ' + fpMoney(fRent.monthlyRent, 0) + '/mo</div></div>';
+    // Rent then buy card
+    if (rentThenBuyData) {
+      html += '<div style="background:var(--bg-card);border:2px solid ' + (winner.name.includes('then') ? 'var(--accent)' : 'var(--border)') + ';border-radius:12px;padding:1.2rem;text-align:center;">';
+      html += '<div style="font-size:0.85rem;font-weight:600;">🔄 Rent ' + rentBeforeYears + 'yr → Buy</div>';
+      html += '<div class="big-number" style="font-size:1.6rem;color:var(--accent);">' + fpMoney(rentThenBuyData.wealthPosition, 0) + '</div>';
+      html += '<div style="font-size:0.8rem;color:var(--text-muted);">Net equity after selling</div>';
+      html += '<div style="font-size:0.82rem;margin-top:0.5rem;">Deposit grew to: ' + fpMoney(rentThenBuyData.grownDeposit, 0) + '</div>';
+      html += '<div style="font-size:0.82rem;">Bought at: ' + fpMoney(rentThenBuyData.futurePrice, 0) + '</div></div>';
+    }
+    html += '</div></div>';
+
+    // Monthly costs
+    html += '<div class="result-card fade-up"><h3>📅 Monthly Costs (Today)</h3><div class="comparison-grid">';
     html += '<div class="comparison-col"><h4>🏠 Buy</h4>';
-    html += '<div class="big-number" style="font-size:1.5rem;color:var(--accent);">' + fpMoney(monthlyPmt) + '</div>';
-    html += '<div class="big-label">Mortgage Payment</div>';
+    html += '<div class="big-number" style="font-size:1.5rem;color:var(--accent);">' + fpMoney(monthlyPmt) + '</div><div class="big-label">Mortgage</div>';
     html += '<div class="result-row mt-2"><span class="result-label">Maintenance</span><span class="result-value">' + fpMoney(price * maintPct / 100 / 12) + '/mo</span></div>';
     html += '<div class="result-row"><span class="result-label">Service + Ground</span><span class="result-value">' + fpMoney((serviceCharge + groundRent) / 12) + '/mo</span></div>';
-    var totalMonthlyBuy = monthlyPmt + (price * maintPct / 100 / 12) + ((serviceCharge + groundRent) / 12);
-    html += '<div class="result-row" style="font-weight:700;border-top:2px solid var(--border);padding-top:.5rem;"><span class="result-label">Total Monthly</span><span class="result-value accent">' + fpMoney(totalMonthlyBuy) + '</span></div>';
-    html += '</div>';
+    html += '<div class="result-row"><span class="result-label">Insurance</span><span class="result-value">' + fpMoney(homeInsurance / 12) + '/mo</span></div>';
+    var totalMoBuy = monthlyPmt + price * maintPct / 100 / 12 + (serviceCharge + groundRent) / 12 + homeInsurance / 12;
+    html += '<div class="result-row" style="font-weight:700;border-top:2px solid var(--border);padding-top:.5rem;"><span class="result-label">Total</span><span class="result-value accent">' + fpMoney(totalMoBuy) + '</span></div></div>';
     html += '<div class="comparison-col"><h4>🏢 Rent</h4>';
-    html += '<div class="big-number" style="font-size:1.5rem;color:var(--secondary);">' + fpMoney(rentMonthly) + '</div>';
-    html += '<div class="big-label">Monthly Rent</div>';
-    html += '<div class="result-row mt-2"><span class="result-label">Year 5 rent</span><span class="result-value">' + fpMoney(rentMonthly * Math.pow(1 + rentIncPct / 100, 4)) + '/mo</span></div>';
-    html += '<div class="result-row"><span class="result-label">Year 10 rent</span><span class="result-value">' + fpMoney(rentMonthly * Math.pow(1 + rentIncPct / 100, 9)) + '/mo</span></div>';
+    html += '<div class="big-number" style="font-size:1.5rem;color:var(--secondary);">' + fpMoney(rentMonthly) + '</div><div class="big-label">Monthly Rent</div>';
+    html += '<div class="result-row mt-2"><span class="result-label">Insurance</span><span class="result-value">' + fpMoney(rentersInsurance / 12) + '/mo</span></div>';
+    html += '<div class="result-row"><span class="result-label">Year 5 rent</span><span class="result-value">' + fpMoney(rentMonthly * Math.pow(1 + rentIncPct / 100, 4)) + '/mo</span></div>';
+    html += '<div class="result-row"><span class="result-label">Year ' + planToStay + ' rent</span><span class="result-value">' + fpMoney(rentMonthly * Math.pow(1 + rentIncPct / 100, planToStay - 1)) + '/mo</span></div>';
+    var moDiff = totalMoBuy - rentMonthly;
+    html += '<div class="result-row" style="font-weight:700;border-top:2px solid var(--border);padding-top:.5rem;"><span class="result-label">Difference</span><span class="result-value ' + (moDiff > 0 ? 'negative' : 'positive') + '">' + (moDiff > 0 ? 'Buy costs ' : 'Rent costs ') + fpMoney(Math.abs(moDiff)) + ' more</span></div>';
     html += '</div></div></div>';
 
-    // Stamp duty
-    html += '<div class="result-card fade-up"><h3>🏛️ Stamp Duty (SDLT)</h3>';
-    html += '<div class="result-highlight"><div class="big-number">' + fpMoney(stampDuty, 0) + '</div><div class="big-label">' + (isFTB ? 'First-Time Buyer Rate' : 'Standard Rate') + '</div></div>';
-    if (isFTB && price <= 500000) {
-      var standardSD = stampDutyStandard(price);
-      var saving = standardSD - stampDuty;
-      if (saving > 0) {
-        html += '<div class="result-row"><span class="result-label">Standard rate would be</span><span class="result-value">' + fpMoney(standardSD, 0) + '</span></div>';
-        html += '<div class="result-row"><span class="result-label">FTB saving</span><span class="result-value positive">' + fpMoney(saving, 0) + '</span></div>';
+    // Upfront costs
+    html += '<div class="result-card fade-up"><h3>🏛️ Upfront Costs to Buy</h3>';
+    html += '<div class="result-highlight"><div class="big-number">' + fpMoney(depositAmt + upfrontBuyCosts, 0) + '</div><div class="big-label">Total Cash Needed</div></div>';
+    html += '<div class="result-row"><span class="result-label">Deposit</span><span class="result-value">' + fpMoney(depositAmt, 0) + ' (' + (depositAmt / price * 100).toFixed(0) + '%)</span></div>';
+    html += '<div class="result-row"><span class="result-label">Stamp Duty (' + (isFTB ? 'FTB' : 'Standard') + ')</span><span class="result-value">' + fpMoney(stampDuty, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Solicitor/Legal</span><span class="result-value">' + fpMoney(solicitorFees, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Survey & Valuation</span><span class="result-value">' + fpMoney(surveyFees, 0) + '</span></div>';
+    html += '</div>';
+
+    // Year-by-year table
+    html += '<div class="result-card fade-up"><h3>📊 Year-by-Year Comparison</h3>';
+    html += '<div class="timeline-chart"><table><thead><tr>';
+    html += '<th>Year</th><th>Buy: Spent</th><th>Rent: Spent</th><th>Buy: Net Equity</th><th>Rent: Portfolio</th><th>Best</th>';
+    html += '</tr></thead><tbody>';
+    for (var ki = 0; ki < buyYearData.length; ki++) {
+      var bd = buyYearData[ki], rd = rentYearData[ki];
+      if (bd.year <= 5 || bd.year % 5 === 0 || bd.year === planToStay) {
+        var buyWins = bd.wealthPosition > rd.wealthPosition;
+        html += '<tr><td style="font-weight:700;">' + bd.year + '</td>';
+        html += '<td>' + fpMoney(bd.totalSpent, 0) + '</td>';
+        html += '<td>' + fpMoney(rd.totalSpent, 0) + '</td>';
+        html += '<td>' + fpMoney(bd.netEquity, 0) + '</td>';
+        html += '<td>' + fpMoney(rd.investmentValue, 0) + '</td>';
+        html += '<td style="font-weight:700;" class="' + (buyWins ? 'positive' : 'negative') + '">' + (buyWins ? '🏠 Buy' : '🏢 Rent') + '</td></tr>';
       }
     }
-    html += '</div>';
-
-    // Year-by-year comparison table
-    html += '<div class="result-card fade-up"><h3>📊 Comparison Over Time</h3>';
-    html += '<div class="timeline-chart"><table><thead><tr>';
-    html += '<th>Year</th><th>Total Buy Cost</th><th>Total Rent</th><th>Equity</th><th>Deposit Invested</th><th>Buy Advantage</th>';
-    html += '</tr></thead><tbody>';
-    for (var ti = 0; ti < yearData.length; ti++) {
-      var d = yearData[ti];
-      html += '<tr>';
-      html += '<td style="font-weight:700;">' + d.year + '</td>';
-      html += '<td>' + fpMoney(d.totalBuyCost, 0) + '</td>';
-      html += '<td>' + fpMoney(d.totalRent, 0) + '</td>';
-      html += '<td>' + fpMoney(d.equity, 0) + '</td>';
-      html += '<td>' + fpMoney(d.investmentValue, 0) + '</td>';
-      html += '<td class="' + (d.buySaves >= 0 ? 'positive' : 'negative') + '" style="font-weight:700;">' + (d.buySaves >= 0 ? '+' : '−') + fpMoney(Math.abs(d.buySaves), 0) + '</td>';
-      html += '</tr>';
-    }
     html += '</tbody></table></div>';
-
-    // Break-even
     if (breakEvenYear) {
-      html += '<p style="margin-top:.75rem;font-size:.9rem;color:var(--text-muted);">📍 <strong>Break-even point:</strong> Buying becomes cheaper than renting after approximately <strong>' + breakEvenYear + ' year' + (breakEvenYear > 1 ? 's' : '') + '</strong>.</p>';
+      html += '<p style="margin-top:.75rem;font-size:.9rem;color:var(--text-muted);">📍 <strong>Break-even:</strong> Buying overtakes renting after ~<strong>' + breakEvenYear + ' year' + (breakEvenYear > 1 ? 's' : '') + '</strong>.</p>';
     } else {
-      html += '<p style="margin-top:.75rem;font-size:.9rem;color:var(--text-muted);">📍 Based on these numbers, renting remains cheaper for at least 30 years. Consider whether lifestyle/security benefits of owning matter to you.</p>';
+      html += '<p style="margin-top:.75rem;font-size:.9rem;color:var(--text-muted);">📍 Renting & investing stays ahead for the full ' + planToStay + '-year period.</p>';
     }
     html += '</div>';
 
-    // Visual bar comparison for 10 years
-    var y10 = yearData[1] || yearData[0];
-    html += '<div class="result-card fade-up"><h3>📈 ' + y10.year + '-Year Visual Comparison</h3>';
-    var maxVal = Math.max(y10.totalBuyCost, y10.totalRent, y10.equity, y10.investmentValue);
+    // Rent then buy detail
+    if (rentThenBuyData) {
+      html += '<div class="result-card fade-up"><h3>🔄 Rent ' + rentBeforeYears + ' Years Then Buy</h3>';
+      html += '<p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">What if you rent for ' + rentBeforeYears + ' years, grow your deposit, then buy?</p>';
+      html += '<div class="result-row"><span class="result-label">Your deposit now</span><span class="result-value">' + fpMoney(depositAmt, 0) + '</span></div>';
+      html += '<div class="result-row"><span class="result-label">Deposit after ' + rentBeforeYears + 'yr (invested at ' + investReturnPct + '%)</span><span class="result-value positive">' + fpMoney(rentThenBuyData.grownDeposit, 0) + '</span></div>';
+      html += '<div class="result-row"><span class="result-label">Property price in ' + rentBeforeYears + 'yr (at ' + apprecPct + '% growth)</span><span class="result-value">' + fpMoney(rentThenBuyData.futurePrice, 0) + '</span></div>';
+      html += '<div class="result-row"><span class="result-label">Mortgage needed</span><span class="result-value">' + fpMoney(rentThenBuyData.futureMortgage, 0) + '</span></div>';
+      html += '<div class="result-row"><span class="result-label">Monthly payment</span><span class="result-value">' + fpMoney(rentThenBuyData.futureMonthlyPmt) + '/mo</span></div>';
+      html += '<div class="result-row"><span class="result-label">Stamp duty (future price)</span><span class="result-value">' + fpMoney(rentThenBuyData.futureStampDuty, 0) + '</span></div>';
+      html += '<div class="result-row"><span class="result-label">Rent paid while waiting</span><span class="result-value negative">' + fpMoney(rentThenBuyData.totalRentSpent, 0) + '</span></div>';
+      html += '<div class="result-row" style="font-weight:700;border-top:2px solid var(--border);padding-top:.5rem;"><span class="result-label">Net Wealth at Year ' + planToStay + '</span><span class="result-value accent">' + fpMoney(rentThenBuyData.wealthPosition, 0) + '</span></div>';
+      html += '</div>';
+    }
+
+    // Bar chart
+    html += '<div class="result-card fade-up"><h3>📈 Wealth Comparison at Year ' + planToStay + '</h3>';
+    var allW = [Math.abs(fBuy.wealthPosition), Math.abs(fRent.wealthPosition)];
+    if (rentThenBuyData) allW.push(Math.abs(rentThenBuyData.wealthPosition));
+    var maxW = Math.max.apply(null, allW) || 1;
     html += '<div class="bar-chart">';
-    html += '<div class="bar-item"><span class="bar-label">Buy Cost</span><div class="bar-track"><div class="bar-fill tax" style="width:' + (y10.totalBuyCost / maxVal * 100) + '%">' + fpMoney(y10.totalBuyCost, 0) + '</div></div></div>';
-    html += '<div class="bar-item"><span class="bar-label">Rent Cost</span><div class="bar-track"><div class="bar-fill pension" style="width:' + (y10.totalRent / maxVal * 100) + '%">' + fpMoney(y10.totalRent, 0) + '</div></div></div>';
-    html += '<div class="bar-item"><span class="bar-label">Equity</span><div class="bar-track"><div class="bar-fill takehome" style="width:' + (y10.equity / maxVal * 100) + '%">' + fpMoney(y10.equity, 0) + '</div></div></div>';
-    html += '<div class="bar-item"><span class="bar-label">Invested</span><div class="bar-track"><div class="bar-fill generic-a" style="width:' + (y10.investmentValue / maxVal * 100) + '%">' + fpMoney(y10.investmentValue, 0) + '</div></div></div>';
+    html += '<div class="bar-item"><span class="bar-label">🏠 Buy Now</span><div class="bar-track"><div class="bar-fill takehome" style="width:' + (Math.abs(fBuy.wealthPosition) / maxW * 100) + '%">' + fpMoney(fBuy.wealthPosition, 0) + '</div></div></div>';
+    html += '<div class="bar-item"><span class="bar-label">🏢 Rent</span><div class="bar-track"><div class="bar-fill pension" style="width:' + (Math.abs(fRent.wealthPosition) / maxW * 100) + '%">' + fpMoney(fRent.wealthPosition, 0) + '</div></div></div>';
+    if (rentThenBuyData) {
+      html += '<div class="bar-item"><span class="bar-label">🔄 Rent→Buy</span><div class="bar-track"><div class="bar-fill generic-a" style="width:' + (Math.abs(rentThenBuyData.wealthPosition) / maxW * 100) + '%">' + fpMoney(rentThenBuyData.wealthPosition, 0) + '</div></div></div>';
+    }
     html += '</div></div>';
 
     // Key details
     html += '<div class="result-card fade-up"><h3>📋 Key Details</h3>';
     html += '<div class="result-row"><span class="result-label">Property price</span><span class="result-value">' + fpMoney(price, 0) + '</span></div>';
-    html += '<div class="result-row"><span class="result-label">Deposit</span><span class="result-value">' + fpMoney(depositAmt, 0) + ' (' + (depositAmt / price * 100).toFixed(0) + '%)</span></div>';
-    html += '<div class="result-row"><span class="result-label">Mortgage amount</span><span class="result-value">' + fpMoney(mortgage, 0) + '</span></div>';
-    html += '<div class="result-row"><span class="result-label">Total mortgage repayment</span><span class="result-value">' + fpMoney(monthlyPmt * term * 12, 0) + '</span></div>';
-    html += '<div class="result-row"><span class="result-label">Total interest paid</span><span class="result-value negative">' + fpMoney(monthlyPmt * term * 12 - mortgage, 0) + '</span></div>';
-    html += '<div class="result-row"><span class="result-label">Property value in ' + term + ' years</span><span class="result-value">' + fpMoney(price * Math.pow(1 + apprecPct / 100, term), 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Deposit</span><span class="result-value">' + fpMoney(depositAmt, 0) + ' (' + (depositAmt / price * 100).toFixed(0) + '% · LTV ' + ((price - depositAmt) / price * 100).toFixed(0) + '%)</span></div>';
+    html += '<div class="result-row"><span class="result-label">Mortgage</span><span class="result-value">' + fpMoney(mortgage, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Monthly payment</span><span class="result-value">' + fpMoney(monthlyPmt) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Total repayment (' + term + 'yr)</span><span class="result-value">' + fpMoney(monthlyPmt * term * 12, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Total interest</span><span class="result-value negative">' + fpMoney(monthlyPmt * term * 12 - mortgage, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Property value yr ' + planToStay + '</span><span class="result-value">' + fpMoney(fBuy.propertyValue, 0) + '</span></div>';
+    html += '<div class="result-row"><span class="result-label">Selling costs (est.)</span><span class="result-value">' + fpMoney(fBuy.sellingCosts, 0) + '</span></div>';
     html += '</div>';
 
-    // Ad placeholder
     html += '<div class="ad-placeholder">Ad Space — In-content rectangle</div>';
-
     content.innerHTML = html;
   };
 
